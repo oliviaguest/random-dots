@@ -8,7 +8,9 @@ import glob, os
 path = 'img/'
 img_array = []
 os.chdir(path)
-img_array = np.zeros((37, 10000))
+for i, img_file in enumerate(glob.glob("*.jpg")):
+  None
+img_array = np.zeros((i+1, 10000))
 for i, img_file in enumerate(glob.glob("*.jpg")):
     print(img_file)
     img = Image.open(img_file).convert('L')
