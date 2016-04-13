@@ -4,19 +4,22 @@ import scipy.cluster.hierarchy as sch
 import matplotlib.pyplot as plt
 import random as r
 import string
-import pickle
+import sys
+
+import cPickle as pickle
 
 import scipy.ndimage
 import scipy.misc
 import scipy.cluster.hierarchy as sch
 from scipy.spatial.distance import pdist
+from sklearn.preprocessing import normalize
 
 import hashlib
 
 
 
 def Random(max_value, min_value = 0):
-  "Random integer from min_value to max_value"
+  """Random integer from min_value to max_value"""
   return int(r.randint(min_value, max_value))
 
 class Patterns:
@@ -26,6 +29,7 @@ class Patterns:
   categories             -- default value = 20
   levels_of_distortion   -- levels within a category that increasingly distort items away from the prorotype; default value = 3
   items_per_level        -- how many category members per level; default value = 3
+  items_per_category     -- if previous two parameters are given, this value is set to (1 + levels_of_distortion * items_per_level), otherwise if a list is provided this is used to generate categories; default value = None
   pattern_width          -- width of an individual category item (same for all items); default value = 10
   pattern_height         -- ditto; default value = 20
   max_units_set          -- how many features/units set to 'on'/1; default value = 10
@@ -34,19 +38,24 @@ class Patterns:
   compression_overlap    -- whether compressed items may be closer to the compressed prototype of another category than to their own; default value = False
   compression_width      -- the width of the compressed version of the binary patterns; default value = 5
   compression_height     -- ditto; default value = 5
-  distortion -- parameter that controls the amount of compression/blurring that occurs; default value = 0.07
+  distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar; default value = 0.07
   pickle_file            -- the file to save/load patterns from; default value is function of categories, e.g., if categories = 10, pickle_file = '10_categories.pkl'
   """
-  def __init__(self, categories = 10, levels_of_distortion = 3, items_per_level = 3,
+  def __init__(self, categories = 10, levels_of_distortion = 3, items_per_level = 3, items_per_category = None,
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
                feature_overlap = False, category_overlap = False, compression_overlap = False,
                compression_width = 20, compression_height = 25, distortion = 0.07,
-               pickle_file = None):
+               pickle_file = None, patterns = None, prototypes = None):
 
     self.categories = categories
     self.levels_of_distortion = levels_of_distortion
     self.items_per_level = items_per_level
-    self.pattern_num = self.categories * (1+ self.levels_of_distortion * self.items_per_level)
+    
+    if isinstance(distortion, list) or isinstance(distortion, np.ndarray):
+    else:
+      self.items_per_category = 1 + self.levels_of_distortion * self.items_per_level
+    
+    self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level)
     self.pattern_width = pattern_width
     self.pattern_height = pattern_height
     self.max_units_set = max_units_set
@@ -54,40 +63,96 @@ class Patterns:
     self.feature_overlap = feature_overlap
     self.category_overlap = category_overlap
     self.compression_overlap = compression_overlap
-    
-    self.patterns = np.empty((self.pattern_num, self.pattern_width, self.pattern_height))
-    self.items = np.zeros_like(self.patterns)
-    self.prototypes = np.zeros_like(self.patterns)
 
     self.compression_width = compression_width #int(self.pattern_width*0.5)
     self.compression_height = compression_height #int(self.pattern_height*0.5)
-    self.compressed_representation = np.empty((self.pattern_num, self.compression_width, self.compression_height))
-    self.compressed_resolution = np.ones(self.pattern_num)
-    self.compressed_resolution.fill(distortion)
+    self.compressed_representations = np.empty((self.pattern_num, self.compression_width, self.compression_height))
     
-    if pickle_file == None:
+    if isinstance(distortion, list) or isinstance(distortion, np.ndarray):
+      self.distortion = distortion
+    else:
+      self.distortion = np.ones(self.pattern_num)
+      self.distortion.fill(distortion)
+    
+    if patterns is None:
+      self.patterns = np.empty((self.pattern_num, self.pattern_width, self.pattern_height))
+    else:
+      self.patterns = patterns
+      
+    if prototypes is None:
+      self.prototypes = np.zeros_like(self.patterns)
+    else:
+      self.prototypes = prototypes
+      
+    if pickle_file is None:
       self.pickle_file = str(self.categories)+'_categories.pkl'
     else:
       self.pickle_file = pickle_file
+      
+    if patterns is not None and prototypes is not None:
+      self.calculate_compressed_representations()
+    else: 
+      self.CreatePatterns()
 
-  def calculate_compressed_representation(self):
-    "Create the compression version of the patterns and return it."
+      
+  def calculate_compressed_representations(self):
+    """Create the compression version of the patterns and return it."""
     #for each pattern
     for i, p in enumerate(self.patterns):
-      #calculate what the self.compressed_representation is
-      self.compressed_representation[i] = scipy.misc.imresize(p, (self.compression_width, self.compression_height), interp='bicubic', mode=None)
-      self.compressed_representation[i] = scipy.ndimage.filters.gaussian_filter(self.compressed_representation[i], (1 - self.compressed_resolution[i]))
-    self.compressed_representation /= self.compressed_representation.max(axis = 0) #nornmalise
-    return self.compressed_representation.reshape((self.pattern_num, self.compression_width*self.compression_height))
+      #calculate what the self.compressed_representations is
+      self.compressed_representations[i] = scipy.misc.imresize(p, (self.compression_width, self.compression_height), interp='bicubic', mode=None)
+      self.compressed_representations[i] = scipy.ndimage.filters.gaussian_filter(self.compressed_representations[i], (1 - self.distortion[i]))
+      
+    self.compressed_representations += 0.00001
+    #self.compressed_representations /= self.compressed_representations.max(axis = 0) #normalise
+    self.compressed_representations /= np.linalg.norm(self.compressed_representations, axis = 0) #normalise
+    #return self.compressed_representations.reshape((self.pattern_num, self.compression_width*self.compression_height))
 
 #To do:
 #Create a function that just creates prototypes
 #Create a function that uses prototypes to create items, different amount per prototype/category
 #Output after both run is a single list with all patterns, as now
+  
+  def save(self, file_name = 'temp.pkl'):
+     """Save to pickle file.
 
+     Keyword arguments:
+     file_name -- default value = 'temp.pkl'"""
+     f = open(file_name, 'w')
+     pickle.dump(self, f)
+     
+  def load(self, file_name = 'temp.pkl'):
+     """Save to pickle file.
 
+     Keyword arguments:
+     file_name -- default value = 'temp.pkl'"""
+     f = open(file_name, 'r')
+     new_self = pickle.load(f)
+     self.__init__(categories = new_self.categories,
+                   levels_of_distortion = new_self.levels_of_distortion,
+                   items_per_level = new_self.items_per_level,
+                   items_per_category = new_self.items_per_category,
+                   pattern_width = new_self.pattern_width,
+                   pattern_height = new_self.pattern_height,
+                   max_units_set = new_self.max_units_set,
+                   feature_overlap = new_self.feature_overlap,
+                   category_overlap = new_self.category_overlap,
+                   compression_overlap = new_self.compression_overlap,
+                   compression_width = new_self.compression_width,
+                   compression_height = new_self.compression_height,
+                   distortion = new_self.distortion,
+                   pickle_file = new_self.pickle_file,
+                   patterns = new_self.patterns,
+                   prototypes = new_self.prototypes
+                  )
+        
+  def CreatePatterns(self):
+    """Generate the patterns based on the pre-specificed properties."""
+    self.create_patterns()
+    self.calculate_compressed_representations()
+    
   def create_patterns(self):
-    "Generate the patterns based on the pre-specificed properties."
+    """Generate the patterns based on the pre-specificed properties."""
     print 'create_patterns'
     # for readability I have split this into various loops; who cares about time/space complexity
     # this loop generates the prototypes
@@ -172,6 +237,8 @@ class Patterns:
               while min(dist) != dist[i]:
                   item = self.generate_item(self.prototypes[i, :, :], distortion)
                   item_hash = hashlib.sha1(item).hexdigest()
+                  counter += 1
+
                   #tell the user what happened
                   print('Item {0:3d} at level {1:2d} in category {2:2d} rejected because it causes category overlap; attempt: {3:3d}.'.format(o, l, i, counter+1))
                   #then generate a new item from the ith prototype, using the level of distortion we calculated above
@@ -194,7 +261,7 @@ class Patterns:
             o += 1
 
   def generate_item(self, prototype, distortion):
-    "Create a category member given a prototype and a distortion level."
+    """Create a category member given a prototype and a distortion level."""
     item = np.zeros_like(prototype)
     distortion = distortion * 0.25
     indices = np.asarray(np.nonzero(prototype))
@@ -214,12 +281,15 @@ class Patterns:
     item[indices] = 1
     return item
 
-  def dendrograms(self, subset_of_categories = None, metric = 'Euclidean'):
-      # generate the linkage matrix
-      X = self.patterns
-      X = self.calculate_compressed_representation()
-      #X = X.reshape((self.pattern_num,self.pattern_width*self.pattern_height))
-      Z = sch.linkage(X, 'ward')
+
+  def dendrogram(self, X, metric = 'Euclidean', linkage = 'ward'):
+      """Generate hierarchical dendrogram.
+
+      Keyword arguments:
+      metric    -- distance metric; default value = 'Euclidean'
+      linkage   -- default value = 'ward'"""
+      X = X.reshape((X.shape[0], X.shape[1] * X.shape[2]))
+      Z = sch.linkage(X, linkage)
       c, coph_dists = sch.cophenet(Z, pdist(X, metric))
       # Cophenetic Correlation Coefficient of clustering.
       # This compares (correlates) the actual pairwise distances of all your samples to those implied by the hierarchical clustering.
@@ -239,11 +309,28 @@ class Patterns:
       )
  
       ax.tick_params(labelsize=6)
-      plt.show()
       
+  def dendrograms(self):
+      """Generate hierarchical dendrograms for both the binary and the compressed patterns."""
+      X = self.patterns
+      self.dendrogram(X, metric = 'Jaccard')  
 
+      X = self.compressed_representations
+      self.dendrogram(X, metric = 'Euclidean')  
+
+      plt.show()     
+      
+    
 if __name__ == "__main__":
-
+  
+  if sys.argv[1:] != []:
     p = Patterns()
-    p.create_patterns()
-    p.dendrograms()
+    p.load(sys.argv[1])
+  else:
+    p = Patterns()
+    print p.categories
+    #p.save()
+    #p.load()
+
+  p.dendrograms()
+  #print p.patterns[0]
