@@ -16,8 +16,6 @@ from sklearn.preprocessing import normalize
 
 import hashlib
 
-
-
 def Random(max_value, min_value = 0):
   """Random integer from min_value to max_value"""
   return int(r.randint(min_value, max_value))
@@ -133,7 +131,7 @@ class Patterns:
     self.compressed_representations /= np.linalg.norm(self.compressed_representations, axis = 0) #normalise
     #return self.compressed_representations.reshape((self.pattern_num, self.compression_width*self.compression_height))
   
-  def save(self, file_name = 'temp.pkl'):
+  def Save(self, file_name = 'temp.pkl'):
      """Save to pickle file.
 
      Keyword arguments:
@@ -141,7 +139,7 @@ class Patterns:
      f = open(file_name, 'w')
      pickle.dump(self, f)
      
-  def load(self, file_name = 'temp.pkl'):
+  def Load(self, file_name = 'temp.pkl'):
      """Save to pickle file.
 
      Keyword arguments:
@@ -335,7 +333,7 @@ class Patterns:
  
       ax.tick_params(labelsize=6)
       
-  def dendrograms(self):
+  def Dendrograms(self):
       """Generate hierarchical dendrograms for both the binary and the compressed patterns."""
       X = self.patterns
       self.dendrogram(X, metric = 'Jaccard')  
@@ -353,10 +351,9 @@ if __name__ == "__main__":
     p.load(sys.argv[1])
   else:
     p = Patterns(items_per_category = [3, 10, 5])
-    
-    print p.categories
+  
     #p.save()
     #p.load()
 
-  p.dendrograms()
+  p.Dendrograms()
   #print p.patterns[0]
