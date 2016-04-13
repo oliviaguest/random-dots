@@ -11,6 +11,10 @@ import scipy.misc
 import scipy.cluster.hierarchy as sch
 from scipy.spatial.distance import pdist
 
+import hashlib
+
+
+
 def Random(max_value, min_value = 0):
   "Random integer from min_value to max_value"
   return int(r.randint(min_value, max_value))
@@ -25,16 +29,18 @@ class Patterns:
   pattern_width          -- width of an individual category item (same for all items); default value = 10
   pattern_height         -- ditto; default value = 20
   max_units_set          -- how many features/units set to 'on'/1; default value = 10
-  overlap                -- whether prorotypes may have common features with each other; default value = True
+  feature_overlap        -- whether prototypes may have common features with each other; default value = False
+  category_overlap       -- whether catgeory members may be closer to the prototype of another category than to their own; default value = False
+  compression_overlap    -- whether compressed items may be closer to the compressed prototype of another category than to their own; default value = False
   compression_width      -- the width of the compressed version of the binary patterns; default value = 5
   compression_height     -- ditto; default value = 5
-  compression_resolution -- parameter that controls the amount of compression/blurring that occurs; default value = 0.07
+  distortion -- parameter that controls the amount of compression/blurring that occurs; default value = 0.07
   pickle_file            -- the file to save/load patterns from; default value is function of categories, e.g., if categories = 10, pickle_file = '10_categories.pkl'
   """
-  def __init__(self, categories = 20, levels_of_distortion = 3, items_per_level = 3,
-               pattern_width = 10, pattern_height = 20, max_units_set = 10,
-               feature_overlap = False, category_overlap = False, distortion_overlap = False,
-               compression_width = 5, compression_height = 5, compression_resolution = 0.07,
+  def __init__(self, categories = 10, levels_of_distortion = 3, items_per_level = 3,
+               pattern_width = 30, pattern_height = 50, max_units_set = 20,
+               feature_overlap = False, category_overlap = False, compression_overlap = False,
+               compression_width = 20, compression_height = 25, distortion = 0.07,
                pickle_file = None):
 
     self.categories = categories
@@ -46,6 +52,8 @@ class Patterns:
     self.max_units_set = max_units_set
     
     self.feature_overlap = feature_overlap
+    self.category_overlap = category_overlap
+    self.compression_overlap = compression_overlap
     
     self.patterns = np.empty((self.pattern_num, self.pattern_width, self.pattern_height))
     self.items = np.zeros_like(self.patterns)
@@ -55,7 +63,7 @@ class Patterns:
     self.compression_height = compression_height #int(self.pattern_height*0.5)
     self.compressed_representation = np.empty((self.pattern_num, self.compression_width, self.compression_height))
     self.compressed_resolution = np.ones(self.pattern_num)
-    self.compressed_resolution.fill(compression_resolution)
+    self.compressed_resolution.fill(distortion)
     
     if pickle_file == None:
       self.pickle_file = str(self.categories)+'_categories.pkl'
@@ -72,6 +80,12 @@ class Patterns:
     self.compressed_representation /= self.compressed_representation.max(axis = 0) #nornmalise
     return self.compressed_representation.reshape((self.pattern_num, self.compression_width*self.compression_height))
 
+#To do:
+#Create a function that just creates prototypes
+#Create a function that uses prototypes to create items, different amount per prototype/category
+#Output after both run is a single list with all patterns, as now
+
+
   def create_patterns(self):
     "Generate the patterns based on the pre-specificed properties."
     print 'create_patterns'
@@ -79,6 +93,7 @@ class Patterns:
     # this loop generates the prototypes
     coord = [] #keep track of coordinates for setting features to 1
     o = 0 #counter for patterns overall, used further down
+    hash_list = []
     #for each category and so therefore for each prototype we are about to create
     #(remember it's one prorotype per category)
     for i in range(0, self.categories):
@@ -117,9 +132,10 @@ class Patterns:
       self.patterns[o, :, :] = self.prototypes[i, :, :]
       #print self.patterns[o, :, :]
       #we have now moved up from the oth pattern
-      #so we are on the (o+1)th (used next time we get here)
+      #so we are on the (o+1)th 
       o += 1
-      
+      hash_list.append(hashlib.sha1(self.prototypes[i, :, :]).hexdigest())
+
       #here we are initialising two distances,
       #which we use further down to calculate the dist between 
       #a member of a category and the category prototype 
@@ -132,7 +148,14 @@ class Patterns:
             distortion = l+1
             #send it a prototype and an amount of distortion
             item = self.generate_item(self.prototypes[i, :, :], distortion)
-            
+            item_hash = hashlib.sha1(item).hexdigest()
+
+            while str(item_hash) in hash_list:
+                item = self.generate_item(self.prototypes[i, :, :], distortion)
+                item_hash = hashlib.sha1(item).hexdigest()
+                print str(item_hash), hash_list, min(dist), dist[i]
+                print str(item_hash) in hash_list
+
             #now we have generated an item we will calculate the distance of the current item
             #to all the prototypes per category we generated above
             #what we want is the current item to be closest to the prototype from which it was generated above
@@ -145,19 +168,28 @@ class Patterns:
             counter = 0
             #if the minimum distance is not between an item and the ith prototype
             #it was generated from, do the following...
-            while min(dist) != dist[i]:
-                #tell the user what happened
-                print('Item {0:3d} at level {1:2d} in category {2:2d} rejected because it causes category overlap; attempt: {3:3d}.'.format(o, l, i, counter+1))
-                #then generate a new item from the ith prototype, using the level of distortion we calculated above
-                item = self.generate_item(self.prototypes[i, :, :], distortion)
-                #increement this counter because things might get out of control, so we want to know
-                counter += 1
-                #we need to calculate new distances between our new item and the prototypes, so we can know which it's closest to
-                for c in range(self.categories):
-                    dist[c] = np.linalg.norm(item-self.prototypes[c,:,:])
+            if not self.category_overlap:
+              while min(dist) != dist[i]:
+                  item = self.generate_item(self.prototypes[i, :, :], distortion)
+                  item_hash = hashlib.sha1(item).hexdigest()
+                  #tell the user what happened
+                  print('Item {0:3d} at level {1:2d} in category {2:2d} rejected because it causes category overlap; attempt: {3:3d}.'.format(o, l, i, counter+1))
+                  #then generate a new item from the ith prototype, using the level of distortion we calculated above
+
+                  while str(item_hash) in hash_list:
+                      item = self.generate_item(self.prototypes[i, :, :], distortion)
+                      item_hash = hashlib.sha1(item).hexdigest()
+                      print str(item_hash), hash_list, min(dist), dist[i]
+                      print str(item_hash) in hash_list
+                      #increement this counter because things might get out of control, so we want to know
+                      counter += 1
+                  #we need to calculate new distances between our new item and the prototypes, so we can know which it's closest to
+                  for c in range(self.categories):
+                      dist[c] = np.linalg.norm(item-self.prototypes[c,:,:])
             print('Item {0:3d} at level {1:2d} in category {2:2d} saved!'.format(o, l, i))
             #since it has passed all the overlap requirements we can save the oth pattern        
             self.patterns[o, :, :] = item
+            hash_list.append(hashlib.sha1(item).hexdigest())
             #and move on to (o+1)th
             o += 1
 
@@ -182,59 +214,29 @@ class Patterns:
     item[indices] = 1
     return item
 
-  def dendrograms(self):
-
-      #temp_categories = self.categories
-      #print "categories", self.categories
-      
-      #temp_pattern_num = temp_categories * (1+ self.levels_of_distortion * self.items_per_level)
-      #self.compressed_representation =  self.calculate_compressed_representation()
-
-      #mat = self.patterns[0:temp_pattern_num, :, :]
-      #mat = mat.reshape((temp_pattern_num,self.pattern_width*self.pattern_height))
-
-      #dist_mat = sch.distance.pdist(mat, 'jaccard')
-      #linkage_matrix = sch.linkage(mat, "ward")
-      #g = plt.figure(2)
-      #ddata = sch.dendrogram(linkage_matrix, color_threshold=1)
-
-      #ax = plt.gca()
-      #xlbls = ax.get_xmajorticklabels()
-
-      #plt.xlabel('Patterns')
-      #plt.ylabel('Distance')
-      ## We change the fontsize of minor ticks label
-      #plt.tick_params(axis='both', which='major', labelsize=10)
-      #plt.tick_params(axis='both', which='minor', labelsize=10)         
-      #plt.show()
-
+  def dendrograms(self, subset_of_categories = None, metric = 'Euclidean'):
       # generate the linkage matrix
-      
       X = self.patterns
-      X = X.reshape((self.pattern_num,self.pattern_width*self.pattern_height))
+      X = self.calculate_compressed_representation()
+      #X = X.reshape((self.pattern_num,self.pattern_width*self.pattern_height))
       Z = sch.linkage(X, 'ward')
-      c, coph_dists = sch.cophenet(Z, pdist(X, 'jaccard'))
-      # c, coph_dists = sch.cophenet(Z, pdist(X))
+      c, coph_dists = sch.cophenet(Z, pdist(X, metric))
       # Cophenetic Correlation Coefficient of clustering.
       # This compares (correlates) the actual pairwise distances of all your samples to those implied by the hierarchical clustering.
       # The closer the value is to 1, the better the clustering preserves the original distances.
-      #print label, type(label[0])
-      #print c
+      print 'Cophenetic correlation coefficient of clustering (the closer to 1 the better):', c
 
       # calculate full dendrogram
       fig = plt.figure(figsize=(20, 10))
       ax = fig.add_subplot(111)
       plt.title('Hierarchical Clustering Dendrogram')
-      plt.xlabel('Photos')
-      plt.ylabel('Distance')
+      plt.xlabel('Patterns')
+      plt.ylabel(metric + ' Distance')
       sch.dendrogram(
           Z,
           leaf_rotation=90,  # rotates the x axis labels
           leaf_font_size=16.,  # font size for the x axis labels
-          #labels = label,
       )
-      #for l in ax.get_xticklabels():
-          #l.set_fontproperties(fp)
  
       ax.tick_params(labelsize=6)
       plt.show()
