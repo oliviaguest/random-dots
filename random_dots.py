@@ -31,25 +31,34 @@ class Patterns:
   pattern_width          -- width of an individual category item (same for all items); default value = 10
   pattern_height         -- ditto; default value = 20
   max_units_set          -- how many features/units set to 'on'/1; default value = 10
+  include_prototypes     -- whether prototypes are included in the final set of patterns; default value = True
   feature_overlap        -- whether prototypes may have common features with each other; default value = False
   category_overlap       -- whether catgeory members may be closer to the prototype of another category than to their own; default value = False
-  compression_overlap    -- whether compressed items may be closer to the compressed prototype of another category than to their own; default value = False
   compression_width      -- the width of the compressed version of the binary patterns; default value = 5
   compression_height     -- ditto; default value = 5
   distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar; default value = 0.07
   pickle_file            -- the file to save/load patterns from; default value is function of categories, e.g., if categories = 10, pickle_file = '10_categories.pkl'
   """
-  def __init__(self, categories = 10, levels_of_distortion = 3, items_per_level = 3, items_per_category = 10,
+  def __init__(self, categories, levels_of_distortion = None, items_per_level = None, items_per_category = None,
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
                feature_overlap = False, category_overlap = False, compression_overlap = False,
                compression_width = 20, compression_height = 25, distortion = 0.07,
-               pickle_file = None, patterns = None, prototypes = None):
+               pickle_file = None, patterns = None, prototypes = None, include_prototypes = True):
+
+
+    if levels_of_distortion is None and items_per_level is None and items_per_category is None:
+      if levels_of_distortion is None and items_per_level is None:
+        raise Exception('Please specify either the levels_of_distortion and the items_per_level or the items_per_category!')  
+      if items_per_category is None:      
+        raise Exception('Please specify either the levels_of_distortion and the items_per_level or the items_per_category!')  
 
     self.categories = categories
     self.levels_of_distortion = levels_of_distortion
+
+    
     self.items_per_level = np.ones(categories)
     self.items_per_level.fill(items_per_level)
-    
+
     #if a list of items per category is provided the three variables above are ignored and reset
     if isinstance(items_per_category, list) or isinstance(items_per_category, np.ndarray):
       self.items_per_category = np.asarray(items_per_category)
@@ -74,10 +83,9 @@ class Patterns:
     
     self.pattern_num = 0
     for c in range(self.categories):
-      for l in range(self.levels_of_distortion):
-        for i in range(int(self.items_per_category[c])):
-          self.pattern_num += 1
-    print self.pattern_num
+      for i in range(int(self.items_per_category[c])):
+        #print c, i, self.pattern_num
+        self.pattern_num += 1
         
     #self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level)
     self.pattern_width = pattern_width
@@ -91,6 +99,8 @@ class Patterns:
     self.compression_width = compression_width #int(self.pattern_width*0.5)
     self.compression_height = compression_height #int(self.pattern_height*0.5)
     self.compressed_representations = np.zeros((self.pattern_num, self.compression_width, self.compression_height))
+    
+    self.include_prototypes = include_prototypes
     
     if isinstance(distortion, list) or isinstance(distortion, np.ndarray):
       self.distortion = distortion
@@ -161,13 +171,16 @@ class Patterns:
                    distortion = new_self.distortion,
                    pickle_file = new_self.pickle_file,
                    patterns = new_self.patterns,
-                   prototypes = new_self.prototypes
+                   prototypes = new_self.prototypes,
+                   include_prototypes = new_self.include_prototypes
                   )
         
   def CreatePatterns(self):
     """Generate the patterns based on the pre-specificed properties."""
     self.create_patterns()
     self.calculate_compressed_representations()
+
+
     
   def create_patterns(self):
     """Generate the patterns based on the pre-specificed properties."""
@@ -215,21 +228,31 @@ class Patterns:
       #set the oth pattern to the prototype we just created above
       #print 'create_patterns', self.categories, self.levels_of_distortion, self.items_per_category, self.items_per_level
 
-      self.patterns[o, :, :] = self.prototypes[i, :, :]
-      #print self.patterns[o, :, :]
-      #we have now moved up from the oth pattern
-      #so we are on the (o+1)th 
-      o += 1
-      hash_list.append(hashlib.sha1(self.prototypes[i, :, :]).hexdigest())
+      if self.include_prototypes:
+        self.patterns[o, :, :] = self.prototypes[i, :, :]
+        #print self.patterns[o, :, :]
+        #we have now moved up from the oth pattern
+        #so we are on the (o+1)th 
+        o += 1
+        hash_list.append(hashlib.sha1(self.prototypes[i, :, :]).hexdigest())
+        
+        if self.levels_of_distortion == 1:
+          items = int(self.items_per_level[i] - 1)
+        else:
+          items = int(self.items_per_level[i])
+      else:
+          items = int(self.items_per_level[i] - 1)
+          
 
       #here we are initialising two distances,
       #which we use further down to calculate the dist between 
       #a member of a category and the category prototype 
       dist = np.zeros([self.categories])
-      
+           
       #for every pattern in this category
       for l in range(self.levels_of_distortion):
-        for e in range(int(self.items_per_level[i]-1)):
+        for e in range(items):
+            print i, l, e, items
             #print 'create_patterns', self.categories, self.levels_of_distortion, self.items_per_category, self.items_per_level
 
             #calculate the value of distortion to send to generate_item
@@ -305,7 +328,7 @@ class Patterns:
     return item
 
 
-  def dendrogram(self, X, metric = 'Euclidean', linkage = 'ward'):
+  def dendrogram(self, X, metric = 'Euclidean', linkage = 'ward', x_label = 'Patterns'):
       """Generate hierarchical dendrogram.
 
       Keyword arguments:
@@ -317,18 +340,20 @@ class Patterns:
       # Cophenetic Correlation Coefficient of clustering.
       # This compares (correlates) the actual pairwise distances of all your samples to those implied by the hierarchical clustering.
       # The closer the value is to 1, the better the clustering preserves the original distances.
-      print 'Cophenetic correlation coefficient of clustering (the closer to 1 the better):', c
+      print 'Cophenetic correlation coefficient of clustering (the closer to 1, the better):', c
 
       # calculate full dendrogram
       fig = plt.figure(figsize=(20, 10))
       ax = fig.add_subplot(111)
       plt.title('Hierarchical Clustering Dendrogram')
-      plt.xlabel('Patterns')
+      plt.xlabel(x_label)
       plt.ylabel(metric + ' Distance')
       sch.dendrogram(
           Z,
           leaf_rotation=90,  # rotates the x axis labels
           leaf_font_size=16.,  # font size for the x axis labels
+          #labels = self.labels
+
       )
  
       ax.tick_params(labelsize=6)
@@ -336,10 +361,10 @@ class Patterns:
   def Dendrograms(self):
       """Generate hierarchical dendrograms for both the binary and the compressed patterns."""
       X = self.patterns
-      self.dendrogram(X, metric = 'Jaccard')  
+      self.dendrogram(X, metric = 'Jaccard', x_label = 'Patterns')  
 
       X = self.compressed_representations
-      self.dendrogram(X, metric = 'Euclidean')  
+      self.dendrogram(X, metric = 'Euclidean', x_label = 'Compressed Patterns')  
 
       plt.show()     
       
@@ -350,10 +375,16 @@ if __name__ == "__main__":
     p = Patterns()
     p.load(sys.argv[1])
   else:
-    p = Patterns(items_per_category = [3, 10, 5])
+    p = Patterns(categories = 3, items_per_category = [10, 8, 4])
+    p.Dendrograms()
+
+    p = Patterns(categories = 10, items_per_category = 3)
+    p.Dendrograms()
+    p = Patterns(categories = 4, levels_of_distortion = 3, items_per_level = 3)
+    p.Dendrograms()
+
   
     #p.save()
     #p.load()
 
-  p.Dendrograms()
   #print p.patterns[0]
