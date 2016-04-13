@@ -55,9 +55,11 @@ class Patterns:
     self.categories = categories
     self.levels_of_distortion = levels_of_distortion
 
-    
-    self.items_per_level = np.ones(categories)
-    self.items_per_level.fill(items_per_level)
+    if isinstance(items_per_level, list) or isinstance(items_per_level, np.ndarray):
+      self.items_per_level = items_per_level
+    else:
+      self.items_per_level = np.ones(categories)
+      self.items_per_level.fill(items_per_level)
 
     #if a list of items per category is provided the three variables above are ignored and reset
     if isinstance(items_per_category, list) or isinstance(items_per_category, np.ndarray):
@@ -376,15 +378,15 @@ if __name__ == "__main__":
     p.load(sys.argv[1])
   else:
     p = Patterns(categories = 3, items_per_category = [10, 8, 4])
-    p.Dendrograms()
+    #p.Dendrograms()
 
     p = Patterns(categories = 10, items_per_category = 3)
-    p.Dendrograms()
+    #p.Dendrograms()
     p = Patterns(categories = 4, levels_of_distortion = 3, items_per_level = 3)
-    p.Dendrograms()
+    #p.Dendrograms()
 
   
-    #p.save()
-    #p.load()
+    p.Save()
+    p.Load()
 
   #print p.patterns[0]
