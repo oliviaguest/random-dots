@@ -41,7 +41,7 @@ class Patterns:
   distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar; default value = 0.07
   pickle_file            -- the file to save/load patterns from; default value is function of categories, e.g., if categories = 10, pickle_file = '10_categories.pkl'
   """
-  def __init__(self, categories = 10, levels_of_distortion = 3, items_per_level = 3, items_per_category = None,
+  def __init__(self, categories = 10, levels_of_distortion = 3, items_per_level = 3, items_per_category = 10,
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
                feature_overlap = False, category_overlap = False, compression_overlap = False,
                compression_width = 20, compression_height = 25, distortion = 0.07,
@@ -49,13 +49,39 @@ class Patterns:
 
     self.categories = categories
     self.levels_of_distortion = levels_of_distortion
-    self.items_per_level = items_per_level
+    self.items_per_level = np.ones(categories)
+    self.items_per_level.fill(items_per_level)
     
-    if isinstance(distortion, list) or isinstance(distortion, np.ndarray):
+    #if a list of items per category is provided the three variables above are ignored and reset
+    if isinstance(items_per_category, list) or isinstance(items_per_category, np.ndarray):
+      self.items_per_category = np.asarray(items_per_category)
+      self.items_per_level = self.items_per_category
+      self.levels_of_distortion = 1
+      self.categories = len(items_per_category)
+      #in this case items per category and items per level are identical
+
+    elif isinstance(items_per_category, int):
+      #self.items_per_level = np.ones(categories)
+      #self.items_per_level.fill(items_per_level)
+      self.items_per_category = np.ones(categories)
+      self.items_per_category.fill(items_per_category)
+      self.items_per_level = self.items_per_category
+      self.levels_of_distortion = 1
+    #otherwise just for sanity check, set this to the value calculated based on the following
+    #elif items_per_category is None:
     else:
-      self.items_per_category = 1 + self.levels_of_distortion * self.items_per_level
+      self.items_per_category = np.ones(categories)
+      self.items_per_category.fill(1 + levels_of_distortion * items_per_level)
+      #it is NOT the same as items_per_level, but it's redundent in this case
     
-    self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level)
+    self.pattern_num = 0
+    for c in range(self.categories):
+      for l in range(self.levels_of_distortion):
+        for i in range(int(self.items_per_category[c])):
+          self.pattern_num += 1
+    print self.pattern_num
+        
+    #self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level)
     self.pattern_width = pattern_width
     self.pattern_height = pattern_height
     self.max_units_set = max_units_set
@@ -66,7 +92,7 @@ class Patterns:
 
     self.compression_width = compression_width #int(self.pattern_width*0.5)
     self.compression_height = compression_height #int(self.pattern_height*0.5)
-    self.compressed_representations = np.empty((self.pattern_num, self.compression_width, self.compression_height))
+    self.compressed_representations = np.zeros((self.pattern_num, self.compression_width, self.compression_height))
     
     if isinstance(distortion, list) or isinstance(distortion, np.ndarray):
       self.distortion = distortion
@@ -75,12 +101,12 @@ class Patterns:
       self.distortion.fill(distortion)
     
     if patterns is None:
-      self.patterns = np.empty((self.pattern_num, self.pattern_width, self.pattern_height))
+      self.patterns = np.zeros((self.pattern_num, self.pattern_width, self.pattern_height))
     else:
       self.patterns = patterns
       
     if prototypes is None:
-      self.prototypes = np.zeros_like(self.patterns)
+      self.prototypes = np.zeros((self.categories, self.pattern_width, self.pattern_height))
     else:
       self.prototypes = prototypes
       
@@ -93,7 +119,6 @@ class Patterns:
       self.calculate_compressed_representations()
     else: 
       self.CreatePatterns()
-
       
   def calculate_compressed_representations(self):
     """Create the compression version of the patterns and return it."""
@@ -107,11 +132,6 @@ class Patterns:
     #self.compressed_representations /= self.compressed_representations.max(axis = 0) #normalise
     self.compressed_representations /= np.linalg.norm(self.compressed_representations, axis = 0) #normalise
     #return self.compressed_representations.reshape((self.pattern_num, self.compression_width*self.compression_height))
-
-#To do:
-#Create a function that just creates prototypes
-#Create a function that uses prototypes to create items, different amount per prototype/category
-#Output after both run is a single list with all patterns, as now
   
   def save(self, file_name = 'temp.pkl'):
      """Save to pickle file.
@@ -153,7 +173,7 @@ class Patterns:
     
   def create_patterns(self):
     """Generate the patterns based on the pre-specificed properties."""
-    print 'create_patterns'
+    
     # for readability I have split this into various loops; who cares about time/space complexity
     # this loop generates the prototypes
     coord = [] #keep track of coordinates for setting features to 1
@@ -165,7 +185,8 @@ class Patterns:
       #we just started on this prototype for this category
       #so there is no way we have set anything to 1 
       units_set = 0
-      
+      #print 'create_patterns', self.categories, self.levels_of_distortion, self.items_per_category, self.items_per_level
+
       #while the units set are less than maximum we want to set
       #meaning that we will do the following untill all the units are set
       while (units_set < self.max_units_set):
@@ -194,6 +215,8 @@ class Patterns:
           
       #so we are done with the ith prototype, we are now going to create the other members of the ith category
       #set the oth pattern to the prototype we just created above
+      #print 'create_patterns', self.categories, self.levels_of_distortion, self.items_per_category, self.items_per_level
+
       self.patterns[o, :, :] = self.prototypes[i, :, :]
       #print self.patterns[o, :, :]
       #we have now moved up from the oth pattern
@@ -208,7 +231,9 @@ class Patterns:
       
       #for every pattern in this category
       for l in range(self.levels_of_distortion):
-        for e in range(self.items_per_level):
+        for e in range(int(self.items_per_level[i]-1)):
+            #print 'create_patterns', self.categories, self.levels_of_distortion, self.items_per_category, self.items_per_level
+
             #calculate the value of distortion to send to generate_item
             distortion = l+1
             #send it a prototype and an amount of distortion
@@ -218,8 +243,8 @@ class Patterns:
             while str(item_hash) in hash_list:
                 item = self.generate_item(self.prototypes[i, :, :], distortion)
                 item_hash = hashlib.sha1(item).hexdigest()
-                print str(item_hash), hash_list, min(dist), dist[i]
-                print str(item_hash) in hash_list
+                #print str(item_hash), hash_list, min(dist), dist[i]
+                #print str(item_hash) in hash_list
 
             #now we have generated an item we will calculate the distance of the current item
             #to all the prototypes per category we generated above
@@ -327,7 +352,8 @@ if __name__ == "__main__":
     p = Patterns()
     p.load(sys.argv[1])
   else:
-    p = Patterns()
+    p = Patterns(items_per_category = [3, 10, 5])
+    
     print p.categories
     #p.save()
     #p.load()
