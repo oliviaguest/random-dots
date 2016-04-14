@@ -97,11 +97,15 @@ class Patterns:
       #for i in range(items):
         ##print c, i, self.pattern_num
         #self.pattern_num += 1
-        
+    self.include_prototypes = include_prototypes
+
     if self.items_per_category is not None:
       self.pattern_num = self.items_per_category.sum()
     elif self.items_per_level is not None:
-      self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level[0])
+      if self.include_prototypes:
+        self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level[0])
+      else:
+        self.pattern_num = self.categories * (self.levels_of_distortion * self.items_per_level[0])
         
     #self.pattern_num = self.categories * (1 + self.levels_of_distortion * self.items_per_level)
     self.pattern_width = pattern_width
@@ -116,7 +120,6 @@ class Patterns:
     self.compression_height = compression_height #int(self.pattern_height*0.5)
     self.compressed_representations = np.zeros((self.pattern_num, self.compression_width, self.compression_height))
     
-    self.include_prototypes = include_prototypes
     
     if isinstance(distortion, list) or isinstance(distortion, np.ndarray):
       self.distortion = distortion
@@ -253,8 +256,11 @@ class Patterns:
         elif self.items_per_category is not None:
           items = int(self.items_per_category[i] - 1)
       else:
-          items = int(self.items_per_level[i] - 1)
-          
+        
+        if self.items_per_level is not None:
+          items = int(self.items_per_level[i])
+        elif self.items_per_category is not None:
+          items = int(self.items_per_category[i])          
 
       #here we are initialising two distances,
       #which we use further down to calculate the dist between 
@@ -389,12 +395,15 @@ if __name__ == "__main__":
     p = Patterns()
     p.load(sys.argv[1])
   else:
-    p = Patterns(categories = 3, items_per_category = [10, 8, 4])
+    p = Patterns(categories = 3, items_per_category = [10, 8, 4, 1], include_prototypes = False)
     p.Dendrograms()
 
-    p = Patterns(categories = 10, items_per_category = 3)
+    p = Patterns(categories = 10, items_per_category = 3, include_prototypes = False)
     p.Dendrograms()
-    p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1)
+    p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1, include_prototypes = False)
+    p.Dendrograms()
+    
+    p = Patterns(categories = 4, items_per_category = 4, include_prototypes = False)
     p.Dendrograms()
 
   
