@@ -24,19 +24,19 @@ class Patterns:
   """A class that creates, stores, and loads random dot patterns.
 
   Keyword arguments:
-  categories             -- default value = 20
-  levels_of_distortion   -- levels within a category that increasingly distort items away from the prorotype; default value = 3
-  items_per_level        -- how many category members per level; default value = 3
+  categories             -- number of categories
+  levels_of_distortion   -- levels within a category that increasingly distort items away from the prorotype
+  items_per_level        -- how many category members per level
   items_per_category     -- if previous two parameters are given, this value is set to (1 + levels_of_distortion * items_per_level), otherwise if a list is provided this is used to generate categories; default value = None
-  pattern_width          -- width of an individual category item (same for all items); default value = 10
-  pattern_height         -- ditto; default value = 20
-  max_units_set          -- how many features/units set to 'on'/1; default value = 10
-  include_prototypes     -- whether prototypes are included in the final set of patterns; default value = True
-  feature_overlap        -- whether prototypes may have common features with each other; default value = False
-  category_overlap       -- whether catgeory members may be closer to the prototype of another category than to their own; default value = False
-  compression_width      -- the width of the compressed version of the binary patterns; default value = 5
-  compression_height     -- ditto; default value = 5
-  distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar; default value = 0.07
+  pattern_width          -- width of an individual category item (same for all items)
+  pattern_height         -- ditto
+  max_units_set          -- how many features/units set to 'on'/1
+  include_prototypes     -- whether prototypes are included in the final set of patterns
+  feature_overlap        -- whether prototypes may have common features with each other
+  category_overlap       -- whether catgeory members may be closer to the prototype of another category than to their own
+  compression_width      -- the width of the compressed version of the binary patterns
+  compression_height     -- ditto
+  distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar
   """
   def __init__(self, categories, levels_of_distortion = None, items_per_level = None, items_per_category = None,
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
@@ -152,7 +152,6 @@ class Patterns:
       self.compressed_representations[i] = scipy.ndimage.filters.gaussian_filter(self.compressed_representations[i], (1 - self.distortion[i]))
       
     self.compressed_representations += 0.00001
-    #self.compressed_representations /= self.compressed_representations.max(axis = 0) #normalise
     self.compressed_representations /= np.linalg.norm(self.compressed_representations, axis = 0) #normalise
     #return self.compressed_representations.reshape((self.pattern_num, self.compression_width*self.compression_height))
   
