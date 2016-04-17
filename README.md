@@ -9,6 +9,13 @@ To load some random dots from a file:
 python random_dots.py my_file.pkl
 ```
 
+To understand how the code works, I have included descriptive comments in [```random_dots.py```](https://github.com/oliviaguest/visual-features/blob/master/random_dots.py).
+Also docstring included, i.e. running the following will return the docstring for creating/initialising a randomdot pattern:
+```
+import random_dots
+help(random_dots)
+```
+
 ## PCA on images
 To run a PCA and produce a dendrogram of the PCA:
 ```
