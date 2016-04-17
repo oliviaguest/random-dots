@@ -10,7 +10,7 @@ python random_dots.py my_file.pkl
 ```
 
 To understand how the code works, I have included descriptive comments in [```random_dots.py```](https://github.com/oliviaguest/visual-features/blob/master/random_dots.py).
-Also docstring included, i.e. running the following will return the docstring for creating/initialising a randomdot pattern:
+Also running the following will return the docstring for creating/initialising a random dot pattern:
 ```
 import random_dots
 help(random_dots)
