@@ -1,5 +1,5 @@
-# visual-features
-## Random dot patterns
+# Random Dot Patterns
+
 To generate some random dots with the default settings:
 ```
 python randomdots.py
@@ -14,10 +14,4 @@ Also running the following will return the docstring for creating, initialising,
 ```
 import randomdots
 help(randomdots)
-```
-
-## PCA on images
-To run a PCA and produce a dendrogram of the PCA:
-```
-python img_pca.py
 ```
