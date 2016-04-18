@@ -9,7 +9,7 @@ To load some random dots from a file:
 python randomdots.py my_file.pkl
 ```
 
-To understand how the code works, I have included highly descriptive comments in ```[randomdots.py](https://github.com/oliviaguest/random-dots/blob/master/randomdots.py)```.
+To understand how the code works, I have included highly descriptive comments in [```randomdots.py```](https://github.com/oliviaguest/random-dots/blob/master/randomdots.py).
 Also running the following will return the docstring for creating, initialising, saving, etc., a random dot pattern:
 ```python
 import randomdots
