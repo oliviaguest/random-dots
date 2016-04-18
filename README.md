@@ -2,18 +2,18 @@
 ## Random dot patterns
 To generate some random dots with the default settings:
 ```
-python random_dots.py
+python randomdots.py
 ```
 To load some random dots from a file:
 ```
-python random_dots.py my_file.pkl
+python randomdots.py my_file.pkl
 ```
 
-To understand how the code works, I have included descriptive comments in [```random_dots.py```](https://github.com/oliviaguest/visual-features/blob/master/random_dots.py).
-Also running the following will return the docstring for creating/initialising a random dot pattern:
+To understand how the code works, I have included highly descriptive comments in [```randomdots.py```](https://github.com/oliviaguest/visual-features/blob/master/randomdots.py).
+Also running the following will return the docstring for creating, initialising, saving, etc., a random dot pattern:
 ```
-import random_dots
-help(random_dots)
+import randomdots
+help(randomdots)
 ```
 
 ## PCA on images
