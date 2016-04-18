@@ -1,7 +1,7 @@
 # Random Dot Patterns
 
 To generate some random dots with the default settings:
-```
+```bash
 python randomdots.py
 ```
 To load some random dots from a file:
