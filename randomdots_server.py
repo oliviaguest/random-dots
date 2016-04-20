@@ -15,7 +15,7 @@ from scipy.spatial.distance import pdist
 from sklearn.preprocessing import normalize
 
 import hashlib
-import seaborn as sns
+#import seaborn as sns
 def Random(max_value, min_value = 0):
   """Random integer from min_value to max_value"""
   return int(r.randint(min_value, max_value))
@@ -38,7 +38,7 @@ class Patterns:
   compression_height     -- ditto
   distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar
   """
-  def __init__(self, categories = 5, levels_of_distortion = None, items_per_level = None, items_per_category = None,
+  def __init__(self, categories, levels_of_distortion = None, items_per_level = None, items_per_category = None,
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
                feature_overlap = False, category_overlap = False, compression_overlap = False,
                compression_width = 20, compression_height = 25, distortion = 0.07,
@@ -192,6 +192,7 @@ class Patterns:
     """Generate the patterns based on the pre-specificed properties."""
     self.create_patterns()
     self.calculate_compressed_representations()
+
 
     
   def create_patterns(self):
@@ -396,13 +397,13 @@ if __name__ == "__main__":
     p = Patterns(categories = 3, items_per_category = [10, 8, 4, 1], include_prototypes = False)
     p.Dendrograms()
 
-    #p = Patterns(categories = 10, items_per_category = 3, include_prototypes = False)
-    #p.Dendrograms()
-    #p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1, include_prototypes = False)
-    #p.Dendrograms()
+    p = Patterns(categories = 10, items_per_category = 3, include_prototypes = False)
+    p.Dendrograms()
+    p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1, include_prototypes = False)
+    p.Dendrograms()
     
-    #p = Patterns(categories = 4, items_per_category = 4, include_prototypes = False)
-    #p.Dendrograms()
+    p = Patterns(categories = 4, items_per_category = 4, include_prototypes = False)
+    p.Dendrograms()
 
   
     #p.Save()
