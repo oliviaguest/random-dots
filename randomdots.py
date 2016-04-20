@@ -376,15 +376,18 @@ class Patterns:
       ax.set_ylim(bottom=-0.5) 
       ax.tick_params(labelsize=25)
       
-  def Dendrograms(self):
+  def Dendrograms(self, fig_save_as = 'temp.pdf'):
       """Generate hierarchical dendrograms for both the binary and the compressed patterns."""
       X = self.patterns
       self.dendrogram(X, metric = 'Jaccard', x_label = 'Patterns')  
+      plt.savefig('dendrogram_'+fig_save_as)
 
       X = self.compressed_representations
       self.dendrogram(X, metric = 'Euclidean', x_label = 'Compressed Patterns')  
+      plt.savefig('compressed_dendrogram_'+fig_save_as)
 
-      plt.show()     
+      plt.show()  
+      
       
     
 if __name__ == "__main__":
