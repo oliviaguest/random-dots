@@ -15,7 +15,7 @@ from scipy.spatial.distance import pdist
 from sklearn.preprocessing import normalize
 
 import hashlib
-import seaborn as sns
+#import seaborn as sns
 def Random(max_value, min_value = 0):
   """Random integer from min_value to max_value"""
   return int(r.randint(min_value, max_value))
