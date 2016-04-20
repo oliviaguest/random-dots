@@ -397,13 +397,13 @@ if __name__ == "__main__":
     p = Patterns(categories = 3, items_per_category = [10, 8, 4, 1], include_prototypes = False)
     p.Dendrograms()
 
-    p = Patterns(categories = 10, items_per_category = 3, include_prototypes = False)
-    p.Dendrograms()
-    p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1, include_prototypes = False)
-    p.Dendrograms()
+    #p = Patterns(categories = 10, items_per_category = 3, include_prototypes = False)
+    #p.Dendrograms()
+    #p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1, include_prototypes = False)
+    #p.Dendrograms()
     
-    p = Patterns(categories = 4, items_per_category = 4, include_prototypes = False)
-    p.Dendrograms()
+    #p = Patterns(categories = 4, items_per_category = 4, include_prototypes = False)
+    #p.Dendrograms()
 
   
     #p.Save()
