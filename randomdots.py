@@ -38,7 +38,7 @@ class Patterns:
   compression_height     -- ditto
   distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar
   """
-  def __init__(self, categories = 3, levels_of_distortion = None, items_per_level = None, items_per_category = [4 3 1],
+  def __init__(self, categories = 3, levels_of_distortion = None, items_per_level = None, items_per_category = [4, 3 ,1],
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
                feature_overlap = False, category_overlap = False, compression_overlap = False,
                compression_width = 20, compression_height = 25, distortion = 0.07,
