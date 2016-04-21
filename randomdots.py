@@ -386,9 +386,7 @@ class Patterns:
       self.dendrogram(X, metric = 'Euclidean', x_label = 'Compressed Patterns')  
       plt.savefig('compressed_dendrogram_'+fig_save_as)
 
-      plt.show()  
-      
-      
+     #plt.show()
     
 if __name__ == "__main__":
   
@@ -396,19 +394,5 @@ if __name__ == "__main__":
     p = Patterns()
     p.load(sys.argv[1])
   else:
-    p = Patterns(categories = 3, items_per_category = [10, 8, 4, 1], include_prototypes = False)
+    p = Patterns(categories = 3, items_per_category = [10, 8, 4], include_prototypes = False)
     p.Dendrograms()
-
-    #p = Patterns(categories = 10, items_per_category = 3, include_prototypes = False)
-    #p.Dendrograms()
-    #p = Patterns(categories = 4, levels_of_distortion = 4, items_per_level = 1, include_prototypes = False)
-    #p.Dendrograms()
-    
-    #p = Patterns(categories = 4, items_per_category = 4, include_prototypes = False)
-    #p.Dendrograms()
-
-  
-    #p.Save()
-    #p.Load()
-
-  #print p.patterns[0]
