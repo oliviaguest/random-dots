@@ -37,12 +37,13 @@ class Patterns:
   compression_width      -- the width of the compressed version of the binary patterns
   compression_height     -- ditto
   distortion             -- parameter that controls the amount of compression/blurring that occurs; can be list/numpy array or scalar
+  constant_distortion    -- amount of distortion when only one level of distortion is used
   """
   def __init__(self, categories = None, levels_of_distortion = None, items_per_level = None, items_per_category = None,
                pattern_width = 30, pattern_height = 50, max_units_set = 20,
                feature_overlap = False, category_overlap = False, compression_overlap = False,
                compression_width = 20, compression_height = 25, distortion = 0.07,
-               patterns = None, prototypes = None, include_prototypes = True):
+               patterns = None, prototypes = None, include_prototypes = True, constant_distortion = 1):
 
 
     if levels_of_distortion is None and items_per_level is None and items_per_category is None:
@@ -64,13 +65,16 @@ class Patterns:
  
     self.labels = []
 
-
+    self.constant_distortion = constant_distortion
+    
+    
     #if a list of items per category is provided the three variables above are ignored and reset
     if isinstance(items_per_category, list) or isinstance(items_per_category, np.ndarray):
       self.items_per_category = np.asarray(items_per_category)
       self.items_per_level = None
       self.levels_of_distortion = 1
       self.categories = len(items_per_category)
+      
       #in this case items per category and items per level are identical
 
     elif isinstance(items_per_category, int):
@@ -272,7 +276,10 @@ class Patterns:
             #print 'create_patterns', self.categories, self.levels_of_distortion, self.items_per_category, self.items_per_level
 
             #calculate the value of distortion to send to generate_item
-            distortion = l+1
+            if self.levels_of_distortion == 1:
+              distortion = self.constant_distortion
+            else:
+              distortion = l+1
             #send it a prototype and an amount of distortion
             item = self.generate_item(self.prototypes[i, :, :], distortion)
             item_hash = hashlib.sha1(item).hexdigest()
@@ -394,5 +401,9 @@ if __name__ == "__main__":
     p = Patterns()
     p.load(sys.argv[1])
   else:
-    p = Patterns(categories = 3, items_per_category = [10, 8, 4], include_prototypes = False)
+    p = Patterns(categories = 3, items_per_category = [10, 8, 4], include_prototypes = False, constant_distortion = 1)
+    #p = Patterns(categories = 3, levels_of_distortion = 3, include_prototypes = False,items_per_level=3)
     p.Dendrograms()
+    p = Patterns(categories = 3, items_per_category = [10, 8, 4], include_prototypes = False, constant_distortion = 4)
+    p.Dendrograms()
+    plt.show()
